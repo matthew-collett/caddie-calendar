@@ -39,5 +39,5 @@ jobs:
           zip -r ../src.zip .
           cd ../..
           aws lambda update-function-code \
-            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+            --function-name ${{ secrets.FUNCTION_NAME }} \
             --zip-file fileb://booker/src.zip
