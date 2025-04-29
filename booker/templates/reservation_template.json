@@ -1,0 +1,31 @@
+{
+    "reservation": {
+        "club_id": "{{CLUB_ID}}",
+        "teetime_id": "{{TEETIME_ID}}",
+        "recurrence_id": null,
+        "state": "confirmed",
+        "holes": "{{HOLES}}",
+        "eligible_for_mobile_self_check_in": false,
+        "made_online": true,
+        "origin_reservation_id": null,
+        "created_user_id": null,
+        "reminder_chronodeal_chosen_at": null,
+        "source": "chronogolf",
+        "online_note": null,
+        "booking_reference": null,
+        "cancellable": true,
+        "editable": true,
+        "force_online_payment": false,
+        "discount_type": null,
+        "lottery_choices_attributes": null,
+        "payment_source_id": null,
+        "payment_source_type": null,
+        "medium": "dashboard",
+        "club": {
+            "id": "{{CLUB_ID}}",
+            "name": "{{CLUB_NAME}}",
+            "currency_code": "{{CURRENCY_CODE}}"
+        },
+        "rounds_attributes": []
+    }
+}

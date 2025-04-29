@@ -1,0 +1,14 @@
+
+
+# python
+**/__pycache__
+**/venv
+**/zappa_settings.json
+
+
+
+## other
+*.log*
+.vscode
+.DS_Store
+**/.env
