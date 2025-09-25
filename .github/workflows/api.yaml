@@ -1,58 +1,15 @@
-name: deploy
+name: api
 
 on:
   push:
     branches: [main]
     paths:
       - "api/**"
-      - "ui/**"
-      - ".github/workflows/deploy.yml"
+      - ".github/workflows/api.yaml"
   workflow_dispatch:
 
 jobs:
-  deploy-client:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./ui
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: latest
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 'lts/*'
-          cache: 'pnpm'
-          cache-dependency-path: './ui/pnpm-lock.yaml'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build
-        run: pnpm build
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Deploy
-        run: aws s3 sync dist/ s3://${{ secrets.S3_BUCKET }}/ --delete
-
-      - name: Invalidate CloudFront
-        run: |
-          aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
-
-  deploy-api:
+  deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -104,8 +61,6 @@ jobs:
                 "CLUB_ID": "${{ secrets.CLUB_ID }}",
                 "CLUB_NAME": "${{ secrets.CLUB_NAME }}",
                 "COURSE_ID": "${{ secrets.COURSE_ID }}",
-                "CACHE_TYPE": "${{ secrets.CACHE_TYPE }}",
-                "CACHE_DEFAULT_TIMEOUT": "${{ secrets.CACHE_DEFAULT_TIMEOUT }}",
                 "PROXY_URL": "${{ secrets.PROXY_URL }}",
                 "PROXY_LOGIN": "${{ secrets.PROXY_LOGIN }}",
                 "PROXY_LOGOUT": "${{ secrets.PROXY_LOGOUT }}",
@@ -114,8 +69,8 @@ jobs:
                 "PROXY_PEOPLE": "${{ secrets.PROXY_PEOPLE }}",
                 "PROXY_RESERVE": "${{ secrets.PROXY_RESERVE }}",
                 "PROXY_REFERER": "${{ secrets.PROXY_REFERER }}",
-                "MAX_WORKERS": "${{ secrets.MAX_WORKERS }}",
-                "SOURCE": "${{ secrets.SOURCE }}"
+                "SOURCE": "${{ secrets.SOURCE }}",
+                "ALLOWED_ORIGINS": "${{ secrets.ALLOWED_ORIGINS }}"
               }
             }
           }
