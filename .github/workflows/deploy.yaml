@@ -18,6 +18,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: latest
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -25,16 +30,13 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: './ui/pnpm-lock.yaml'
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: latest
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build
         run: pnpm build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
 
       - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -88,7 +90,7 @@ jobs:
               "certificate_arn": "${{ secrets.CERTIFICATE_ARN }}",
               "base_path": "",
               "aws_region": "${{ secrets.AWS_REGION }}",
-              "manage_roles": false,
+              "manage_roles": true,
               "role_name": "${{ secrets.PROJECT_NAME }}-production-ZappaLambdaExecutionRole",
               "project_name": "${{ secrets.PROJECT_NAME }}",
               "runtime": "python3.12",

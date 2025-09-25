@@ -1,6 +1,7 @@
 # python
 **/__pycache__
 **/venv
+**/zappa_settings.json
 
 # ts
 **/node_modules
