@@ -1,14 +1,14 @@
-
-
 # python
 **/__pycache__
 **/venv
-**/zappa_settings.json
 
-
+# ts
+**/node_modules
+**/dist
 
 ## other
 *.log*
 .vscode
 .DS_Store
 **/.env
+**/instance
