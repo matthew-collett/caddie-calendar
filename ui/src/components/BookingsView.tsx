@@ -10,7 +10,8 @@ import {
   Crown,
   User,
   Trash2,
-  MoreHorizontal
+  MoreHorizontal,
+  Loader2
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, type Booking } from '@/lib'
@@ -55,33 +56,39 @@ export const BookingsView = ({ onViewChange }: BookingsViewProps) => {
   } = useQuery({
     queryKey: ['bookings'],
     queryFn: api.bookings.list,
-    staleTime: 2 * 60 * 1000,
-    refetchInterval: 10000,
-    refetchIntervalInBackground: true
+    staleTime: 2 * 60 * 1000
   })
 
   const deleteBookingMutation = useMutation({
     mutationFn: api.bookings.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['bookings'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      toast.success('Booking deleted successfully')
     },
     onError: () => {
-      toast.error('Failed to create booking. Please try again.')
+      toast.error('Failed to delete booking. Please try again.')
     }
   })
 
-  if (isLoading || error) {
+  if (isLoading) {
+    return (
+      <div className="bg-gradient-to-br from-background to-muted/30 p-4 sm:p-6 min-h-full flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
     return (
       <div className="bg-gradient-to-br from-background to-muted/30 p-4 sm:p-6 min-h-full">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-4">
             <h1 className="text-2xl sm:text-4xl font-bold text-foreground mb-2">Your Bookings</h1>
-            <p
-              className={`text-base sm:text-lg ${
-                error ? 'text-destructive' : 'text-muted-foreground'
-              }`}
-            >
-              {error ? 'Error loading bookings. Please try again.' : 'Loading your bookings...'}
+            <p className="text-base sm:text-lg text-destructive">
+              Error loading bookings. Please try again.
             </p>
           </div>
         </div>

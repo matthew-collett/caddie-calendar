@@ -28,11 +28,11 @@ def init_app(app) -> BackgroundScheduler:
 
     scheduler.start()
 
-    # @app.teardown_appcontext
-    # def shutdown(exception=None):
-    #     if scheduler.running:
-    #         app.logger.info("Shutting down scheduler")
-    #         scheduler.shutdown(wait=False)
+    @app.teardown_appcontext
+    def shutdown(exception=None):
+        if scheduler.running:
+            app.logger.info("Shutting down scheduler")
+            scheduler.shutdown(wait=False)
 
     app.logger.info("Scheduler initialized and started")
     return scheduler

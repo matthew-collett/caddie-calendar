@@ -3,10 +3,10 @@ from enum import Enum
 from dataclasses import dataclass, asdict
 from typing import Optional, List
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Text, DateTime, Date, Time, ForeignKey, Boolean
+from sqlalchemy import Integer, String, Text, DateTime, Date, Time, ForeignKey, Boolean, JSON, func
 from sqlalchemy_utils import ChoiceType
 from sqlalchemy.ext.hybrid import hybrid_property
-from datetime import datetime, time, date
+from datetime import datetime, time, date, timezone
 from app import utils
 from . import db
 
@@ -43,6 +43,7 @@ class User(db.Model):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utils.ensure_utc_now)
     bookings = relationship("Booking", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
+    session = relationship("Session", back_populates="user", uselist=False)
 
     def to_dict(self):
         return {
@@ -56,7 +57,7 @@ class Booking(db.Model):
     __tablename__ = "bookings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     booking_date: Mapped[date] = mapped_column(Date, nullable=False)
     target_time: Mapped[time] = mapped_column(Time, nullable=False)
     holes: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -97,8 +98,8 @@ class Notification(db.Model):
     __tablename__ = "notifications"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False)
-    booking_id: Mapped[int] = mapped_column(Integer, ForeignKey("bookings.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    booking_id: Mapped[int] = mapped_column(Integer, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False)
     type: Mapped[NotificationType] = mapped_column(ChoiceType(NotificationType, impl=String()), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
@@ -118,3 +119,18 @@ class Notification(db.Model):
             "is_read": self.is_read,
             "created_at": utils.serialize_datetime(self.created_at),
         }
+
+
+class Session(db.Model):
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    session_data: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utils.ensure_utc_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    user: Mapped["User"] = relationship("User", back_populates="session")
+
+    def is_expired(self):
+        return datetime.now(timezone.utc).replace(tzinfo=None) > self.expires_at

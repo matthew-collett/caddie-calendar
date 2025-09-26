@@ -10,6 +10,8 @@ def create_notification(
     title: str,
     message: str,
 ) -> Notification:
+    from app import service as svc
+
     notification = Notification(
         user_id=user_id,
         booking_id=booking_id,
@@ -19,6 +21,9 @@ def create_notification(
     )
     db.session.add(notification)
     db.session.commit()
+
+    svc.events.broadcast_notification(user_id, notification.to_dict())
+
     return notification
 
 

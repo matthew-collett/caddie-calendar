@@ -102,7 +102,18 @@ export const notifications = {
   markAsRead: (id: number) =>
     request<{ message: string }>(`/notifications/${id}/read`, {
       method: 'POST'
+    }),
+
+  connect: async () => {
+    const token = localStorage.getItem('auth_token')
+    const response = await fetch(`${API_BASE_URL}/notifications/stream`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'text/event-stream'
+      }
     })
+    return response
+  }
 }
 
 export const api = {

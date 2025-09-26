@@ -29,7 +29,7 @@ def login():
     if session_data is None:
         return jsonify({"error": "Login failed"}), 401
 
-    app.sessions[user.id] = session_data
+    svc.sessions.store_session(user.id, session_data)
 
     token = jwt.encode(
         {
@@ -48,9 +48,10 @@ def login():
 @require_auth
 def logout():
     user_id = request.user_id
-    session_data = app.sessions.get(user_id)
-    svc.proxy.logout(session_data)
-    del app.sessions[user_id]
+    session_data = svc.sessions.get_session(user_id)
+    if session_data:
+        svc.proxy.logout(session_data)
+    svc.sessions.delete_session(user_id)
     return jsonify({"success": True}), 200
 
 
@@ -58,7 +59,7 @@ def logout():
 @require_auth
 def status():
     user_id = request.user_id
-    session_data = app.sessions.get(user_id)
+    session_data = svc.sessions.get_session(user_id)
     valid = svc.proxy.validate_session(session_data)
     if not valid:
         logout()

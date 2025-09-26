@@ -17,6 +17,8 @@ def preflight():
     app.logger.info("Starting preflight job")
 
     try:
+        svc.sessions.cleanup_expired_sessions()
+
         target_date = date.today() + timedelta(days=5)
         pending_bookings = svc.bookings.get_bookings(
             status=Status.PENDING, booking_date=target_date
@@ -42,14 +44,19 @@ def preflight():
                     },
                 )
                 continue
-            password = utils.decrypt(app.config["FERNET_KEY"], user.password_hash)
 
-            session_data = svc.proxy.login(user.email, password)
+            session_data = svc.sessions.get_session(user.id)
+            if session_data and svc.proxy.validate_session(session_data):
+                app.logger.info("Using existing valid session", extra={"user_id": user.id})
+            else:
+                password = utils.decrypt(app.config["FERNET_KEY"], user.password_hash)
+                session_data = svc.proxy.login(user.email, password)
+                if session_data:
+                    svc.sessions.store_session(user.id, session_data)
+                    app.logger.info("Created new session", extra={"user_id": user.id})
+
             if session_data:
-                app.sessions[user.id] = session_data
-                app.logger.info(
-                    "Pre-logged in user for processing", extra={"user_id": user.id}
-                )
+                booking_data["session_data"] = session_data
 
             bookings_to_cache.append(booking_data)
         cache.set("bookings", bookings_to_cache)
@@ -94,9 +101,7 @@ def process():
 def process0(booking):
     session_data = None
     try:
-        user_id = booking["user_id"]
-        session_data = app.sessions.get(user_id)
-
+        session_data = booking.get("session_data")
         if not session_data:
             raise AuthenticationFailedError
 

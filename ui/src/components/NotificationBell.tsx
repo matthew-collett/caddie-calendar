@@ -3,7 +3,7 @@ import { Bell, Check, CheckCircle, XCircle } from 'lucide-react'
 import { Button, Popover, PopoverContent, PopoverTrigger, Badge } from '@/components/ui'
 import { api } from '@/lib/api'
 import { type Notification } from '@/lib/types'
-import { useIsMobile } from '@/hooks/use-mobile'
+import { useIsMobile, useNotifications } from '@/hooks'
 import { formatDistanceToNow } from 'date-fns'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 
@@ -23,18 +23,16 @@ export const NotificationBell = () => {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const queryClient = useQueryClient()
 
+  useNotifications()
+
   const { data: notifications = [] } = useQuery({
     queryKey: NOTIFICATION_QUERIES.list,
-    queryFn: () => api.notifications.list(10),
-    refetchInterval: 10000,
-    refetchIntervalInBackground: true
+    queryFn: () => api.notifications.list(10)
   })
 
   const { data: unreadCountData } = useQuery({
     queryKey: NOTIFICATION_QUERIES.unreadCount,
-    queryFn: () => api.notifications.getUnreadCount(),
-    refetchInterval: 10000,
-    refetchIntervalInBackground: true
+    queryFn: () => api.notifications.getUnreadCount()
   })
 
   const unreadCount = unreadCountData?.count ?? 0
@@ -114,9 +112,7 @@ export const NotificationBell = () => {
               <h4 className={`font-medium text-sm ${config.className}`}>{notification.title}</h4>
             </div>
             {expandedId === notification.id ? (
-              <p className="text-xs text-foreground">
-                {notification.message}
-              </p>
+              <p className="text-xs text-foreground">{notification.message}</p>
             ) : (
               <p className="text-xs text-foreground">Click to view details</p>
             )}

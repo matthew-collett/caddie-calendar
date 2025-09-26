@@ -1,6 +1,17 @@
 from app import service as svc
 from app.middlewares import require_auth
-from flask import Blueprint, request, jsonify
+from flask import (
+    Blueprint,
+    request,
+    jsonify,
+    Response,
+    stream_with_context,
+    current_app,
+)
+import json
+import queue
+import threading
+import time
 
 notifications_bp = Blueprint("notifications", __name__, url_prefix="/notifications")
 
@@ -29,3 +40,36 @@ def mark_notification_read(notification_id):
     return jsonify({"message": "Notification marked as read"}), 200
 
 
+@notifications_bp.route("/stream", methods=["GET"])
+@require_auth
+def notification_stream():
+    user_id = request.user_id
+
+    def event_stream():
+        user_queue = queue.Queue()
+        svc.events.add_user_queue(user_id, user_queue)
+
+        try:
+            yield f"data: {json.dumps({'type': 'connected'})}\n\n"
+
+            while True:
+                try:
+                    event_data = user_queue.get(timeout=30)
+                    yield f"data: {json.dumps(event_data)}\n\n"
+                except queue.Empty:
+                    yield f"data: {json.dumps({'type': 'heartbeat'})}\n\n"
+        finally:
+            svc.events.remove_user_queue(user_id)
+
+    response = Response(
+        stream_with_context(event_stream()),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "Cache-Control",
+            "Access-Control-Allow-Credentials": "true",
+        },
+    )
+    return response

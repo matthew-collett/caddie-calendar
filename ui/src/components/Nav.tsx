@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CalendarPlus, Calendar, CalendarCheck, LogOut, User, Moon, Sun } from 'lucide-react'
 import { Button, Popover, PopoverContent, PopoverTrigger } from '@/components/ui'
 import { useAuth, useTheme } from '@/context'
-import { useIsMobile } from '@/hooks/use-mobile'
+import { useIsMobile } from '@/hooks'
 import { NotificationBell } from './NotificationBell'
 
 interface NavigationProps {
