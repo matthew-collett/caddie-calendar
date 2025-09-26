@@ -1,6 +1,6 @@
 from app import service as svc
 from app.middlewares import require_auth
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 
 bookings_bp = Blueprint("bookings", __name__, url_prefix="/bookings")
 

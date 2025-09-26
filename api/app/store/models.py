@@ -1,13 +1,24 @@
 import json
+from dataclasses import asdict, dataclass
+from datetime import date, datetime, time, timezone
 from enum import Enum
-from dataclasses import dataclass, asdict
-from typing import Optional, List
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, Text, DateTime, Date, Time, ForeignKey, Boolean, JSON, func
-from sqlalchemy_utils import ChoiceType
-from sqlalchemy.ext.hybrid import hybrid_property
-from datetime import datetime, time, date, timezone
+from typing import List, Optional
+
 from app import utils
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    Time,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy_utils import ChoiceType
+
 from . import db
 
 
@@ -46,23 +57,23 @@ class User(db.Model):
     session = relationship("Session", back_populates="user", uselist=False)
 
     def to_dict(self):
-        return {
-            "id": self.id,
-            "full_name": self.full_name,
-            "email": self.email
-        }
+        return {"id": self.id, "full_name": self.full_name, "email": self.email}
 
 
 class Booking(db.Model):
     __tablename__ = "bookings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
     booking_date: Mapped[date] = mapped_column(Date, nullable=False)
     target_time: Mapped[time] = mapped_column(Time, nullable=False)
     holes: Mapped[int] = mapped_column(Integer, nullable=False)
     players: Mapped[str] = mapped_column(Text, nullable=False)
-    status: Mapped[Status] = mapped_column(ChoiceType(Status, impl=String()), nullable=False, default=Status.PENDING)
+    status: Mapped[Status] = mapped_column(
+        ChoiceType(Status, impl=String()), nullable=False, default=Status.PENDING
+    )
     booking_id: Mapped[str] = mapped_column(String(100), nullable=True)
     actual_time: Mapped[time] = mapped_column(Time, nullable=True)
     error_details: Mapped[str] = mapped_column(Text, nullable=True)
@@ -98,9 +109,15 @@ class Notification(db.Model):
     __tablename__ = "notifications"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    booking_id: Mapped[int] = mapped_column(Integer, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False)
-    type: Mapped[NotificationType] = mapped_column(ChoiceType(NotificationType, impl=String()), nullable=False)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    booking_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("bookings.id", ondelete="CASCADE"), nullable=False
+    )
+    type: Mapped[NotificationType] = mapped_column(
+        ChoiceType(NotificationType, impl=String()), nullable=False
+    )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -125,7 +142,9 @@ class Session(db.Model):
     __tablename__ = "sessions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id"), nullable=False, unique=True
+    )
     session_data: Mapped[dict] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utils.ensure_utc_now)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

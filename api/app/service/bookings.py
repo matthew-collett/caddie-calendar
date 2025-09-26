@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+
 from app import store, utils
 from app.store.models import Booking, Status
 

@@ -1,9 +1,9 @@
 from flask import Blueprint
+
 from .auth import auth_bp
-from .users import users_bp
 from .bookings import bookings_bp
 from .notifications import notifications_bp
-
+from .users import users_bp
 
 api_bp = Blueprint("api", __name__)
 

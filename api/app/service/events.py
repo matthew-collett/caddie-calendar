@@ -21,9 +21,8 @@ def broadcast_notification(user_id: int, notification_data: dict):
         user_queue = _notification_queues.get(user_id)
         if user_queue:
             try:
-                user_queue.put_nowait({
-                    'type': 'notification',
-                    'data': notification_data
-                })
+                user_queue.put_nowait(
+                    {"type": "notification", "data": notification_data}
+                )
             except queue.Full:
                 pass

@@ -1,17 +1,9 @@
-from app import service as svc
-from app.middlewares import require_auth
-from flask import (
-    Blueprint,
-    request,
-    jsonify,
-    Response,
-    stream_with_context,
-    current_app,
-)
 import json
 import queue
-import threading
-import time
+
+from app import service as svc
+from app.middlewares import require_auth
+from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 notifications_bp = Blueprint("notifications", __name__, url_prefix="/notifications")
 

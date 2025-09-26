@@ -1,6 +1,11 @@
+import atexit
+
+from app.logger import logger
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from .processor import preflight, process
+
+from .processor import preflight as pre
+from .processor import process as proc
 
 
 def init_app(app) -> BackgroundScheduler:
@@ -11,6 +16,14 @@ def init_app(app) -> BackgroundScheduler:
             "misfire_grace_time": 5,
         }
     )
+
+    def preflight():
+        with app.app_context():
+            pre(app)
+
+    def process():
+        with app.app_context():
+            proc(app)
 
     scheduler.add_job(
         func=preflight,
@@ -28,13 +41,14 @@ def init_app(app) -> BackgroundScheduler:
 
     scheduler.start()
 
-    @app.teardown_appcontext
-    def shutdown(exception=None):
+    def shutdown_scheduler():
         if scheduler.running:
-            app.logger.info("Shutting down scheduler")
+            logger.info("Shutting down scheduler")
             scheduler.shutdown(wait=False)
 
-    app.logger.info("Scheduler initialized and started")
+    atexit.register(shutdown_scheduler)
+
+    logger.info("Scheduler initialized and started")
     return scheduler
 
 

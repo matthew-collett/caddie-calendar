@@ -1,8 +1,9 @@
 from flask import Flask
 from flask_cors import CORS
+
+from . import bp, cli, logger, scheduler, store
 from .cache import cache
 from .config import Config
-from . import store, scheduler, bp, cli, logger
 
 
 def create_app():

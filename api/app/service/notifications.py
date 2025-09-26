@@ -1,6 +1,8 @@
-from app.store.models import Notification, NotificationType
-from app.store import db
 from typing import List, Optional
+
+from app.service import events
+from app.store import db
+from app.store.models import Notification, NotificationType
 
 
 def create_notification(
@@ -10,8 +12,6 @@ def create_notification(
     title: str,
     message: str,
 ) -> Notification:
-    from app import service as svc
-
     notification = Notification(
         user_id=user_id,
         booking_id=booking_id,
@@ -22,7 +22,7 @@ def create_notification(
     db.session.add(notification)
     db.session.commit()
 
-    svc.events.broadcast_notification(user_id, notification.to_dict())
+    events.broadcast_notification(user_id, notification.to_dict())
 
     return notification
 
@@ -51,5 +51,3 @@ def mark_as_read(notification_id: int, user_id: int) -> bool:
         db.session.commit()
         return True
     return False
-
-

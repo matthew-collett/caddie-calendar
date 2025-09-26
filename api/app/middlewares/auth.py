@@ -1,7 +1,9 @@
 from functools import wraps
-from flask import request, jsonify, current_app as app
-from app import service as svc
+
 import jwt
+from app import service as svc
+from flask import current_app as app
+from flask import jsonify, request
 
 
 def require_auth(f):

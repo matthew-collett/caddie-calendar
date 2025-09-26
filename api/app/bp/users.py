@@ -1,7 +1,6 @@
 from app import service as svc
 from app.middlewares import require_auth
-from flask import Blueprint, request, jsonify, current_app as app
-
+from flask import Blueprint, jsonify, request
 
 users_bp = Blueprint("users", __name__, url_prefix="/users")
 

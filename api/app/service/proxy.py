@@ -1,6 +1,7 @@
 import requests
-from flask import current_app as app
 from app import utils
+from app.logger import logger
+from flask import current_app as app
 
 
 def login(email, password):
@@ -229,5 +230,5 @@ def _request(session_data, method, endpoint, **kwargs):
             kwargs["timeout"] = app.config["REQUEST_TIMEOUT"]
         return requests.request(method, url, headers=headers, cookies=cookies, **kwargs)
     except Exception:
-        app.logger.exception(f"Request failed to {endpoint}")
+        logger.exception(f"Request failed to {endpoint}")
         return None

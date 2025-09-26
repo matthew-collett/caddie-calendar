@@ -1,9 +1,12 @@
-import jwt
-from app import utils, service as svc
-from app.middlewares import require_auth
-from flask import Blueprint, request, jsonify, current_app as app
 from datetime import datetime, timedelta, timezone
 
+import jwt
+from app import service as svc
+from app import utils
+from app.middlewares import require_auth
+from flask import Blueprint
+from flask import current_app as app
+from flask import jsonify, request
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 

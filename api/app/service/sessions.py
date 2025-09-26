@@ -1,6 +1,7 @@
-from datetime import datetime, timedelta
-from app.store.models import Session, db
+from datetime import timedelta
+
 from app import utils
+from app.store.models import Session, db
 
 
 def store_session(user_id: int, session_data: dict, expires_hours: int = 24):
@@ -13,9 +14,7 @@ def store_session(user_id: int, session_data: dict, expires_hours: int = 24):
         session.created_at = utils.ensure_utc_now()
     else:
         session = Session(
-            user_id=user_id,
-            session_data=session_data,
-            expires_at=expires_at
+            user_id=user_id, session_data=session_data, expires_at=expires_at
         )
         db.session.add(session)
 
@@ -39,7 +38,9 @@ def delete_session(user_id: int):
 
 
 def cleanup_expired_sessions():
-    expired_sessions = Session.query.filter(Session.expires_at < utils.ensure_utc_now()).all()
+    expired_sessions = Session.query.filter(
+        Session.expires_at < utils.ensure_utc_now()
+    ).all()
     for session in expired_sessions:
         db.session.delete(session)
     db.session.commit()

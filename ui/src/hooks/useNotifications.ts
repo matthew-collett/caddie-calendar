@@ -50,12 +50,14 @@ export const useNotifications = () => {
                       (old = { count: 0 }) => ({ count: old.count + 1 })
                     )
                   }
+
+                  queryClient.invalidateQueries({ queryKey: ['bookings'] })
                 }
               }
             }
           }
         }
-      } catch (error) {
+      } catch {
         setTimeout(connectSSE, 5000)
       }
     }

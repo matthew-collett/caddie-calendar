@@ -1,8 +1,9 @@
 import click
+from app import service as svc
+from app import utils
+from app.scheduler import processor as proc
 from flask import current_app as app
 from flask.cli import with_appcontext
-from app import service as svc, utils
-from app.scheduler import processor as proc
 
 
 @click.group()

@@ -20,7 +20,6 @@ class Config(BaseSettings):
     PROXY_PEOPLE: str
     PROXY_RESERVE: str
     PROXY_REFERER: str
-    MAX_WORKERS: int = 5
     SOURCE: str
     ALLOWED_ORIGINS: str = "http://localhost:5173"
     REQUEST_TIMEOUT: int = 10

@@ -2,6 +2,7 @@ import json
 import random
 import re
 from datetime import datetime, timezone
+
 from cryptography.fernet import Fernet
 
 
@@ -14,7 +15,7 @@ def decrypt(key, password):
 
 
 def get_csrf_token(html, script_name):
-    pattern = rf'{re.escape(script_name)}\s*=\s*(\{{.*?\}})(?:;|\s)'
+    pattern = rf"{re.escape(script_name)}\s*=\s*(\{{.*?\}})(?:;|\s)"
     match = re.search(pattern, html, re.DOTALL)
     if not match:
         return None
@@ -78,10 +79,10 @@ def ensure_utc_now() -> datetime:
 
 
 def format_date_readable(date_str):
-    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-    return date_obj.strftime('%a, %b %d')
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+    return date_obj.strftime("%a, %b %d")
 
 
 def format_time_12h(time_str):
-    time_obj = datetime.strptime(time_str, '%H:%M')
-    return time_obj.strftime('%I:%M %p').lstrip('0')
+    time_obj = datetime.strptime(time_str, "%H:%M")
+    return time_obj.strftime("%I:%M %p").lstrip("0")

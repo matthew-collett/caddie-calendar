@@ -1,10 +1,4 @@
-from . import proxy
-from . import users
-from . import bookings
-from . import notifications
-from . import sessions
-from . import events
-
+from . import bookings, events, notifications, proxy, sessions, users
 
 __all__ = [
     "proxy",
