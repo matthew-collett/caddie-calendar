@@ -162,7 +162,7 @@ export const BookingForm = () => {
 
   const addMember = (memberId: number) => {
     const member = members.find(m => m.id === memberId)
-    if (member && !selectedMembers.find(m => m.id === memberId) && selectedMembers.length < 4) {
+    if (member && !selectedMembers.find(m => m.id === memberId) && selectedMembers.length < 3) {
       setSelectedMembers([...selectedMembers, member])
     }
     setMemberSearchOpen(false)
@@ -351,12 +351,12 @@ export const BookingForm = () => {
                         role="combobox"
                         aria-expanded={memberSearchOpen}
                         className="w-full justify-between h-12"
-                        disabled={selectedMembers.length >= 4}
+                        disabled={selectedMembers.length >= 3}
                       >
                         <div className="flex items-center gap-2">
                           <Users className="h-4 w-4 text-muted-foreground" />
-                          {selectedMembers.length >= 4
-                            ? 'Maximum 4 players selected'
+                          {selectedMembers.length >= 3
+                            ? 'Maximum 3 players selected'
                             : 'Add playing partner...'}
                         </div>
                       </Button>
@@ -404,7 +404,7 @@ export const BookingForm = () => {
                     </PopoverContent>
                   </Popover>
                   <p className="text-sm text-muted-foreground">
-                    Selected: {selectedMembers.length}/4 players
+                    Selected: {selectedMembers.length}/3 players
                   </p>
                 </div>
 
