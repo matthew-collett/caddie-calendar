@@ -226,7 +226,7 @@ export const BookingForm = () => {
                             mode="single"
                             selected={field.value}
                             onSelect={field.onChange}
-                            disabled={date => date < addDays(new Date(), 1)}
+                            disabled={date => date < addDays(new Date(), 4)}
                             className="p-3 pointer-events-auto"
                           />
                         </PopoverContent>
