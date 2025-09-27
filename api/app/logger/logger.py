@@ -7,17 +7,20 @@ from datetime import datetime, timezone
 
 class JSONFormatter(logging.Formatter):
     def format(self, record):
-        return json.dumps(
-            {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "level": record.levelname,
-                "name": record.name,
-                "message": record.getMessage(),
-                "module": record.module,
-                "function": record.funcName,
-                "line": record.lineno,
-            }
-        )
+        log_data = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "level": record.levelname,
+            "name": record.name,
+            "message": record.getMessage(),
+            "module": record.module,
+            "function": record.funcName,
+            "line": record.lineno,
+        }
+
+        if record.exc_info:
+            log_data["exception"] = self.formatException(record.exc_info)
+
+        return json.dumps(log_data)
 
 
 def get_config(level):
