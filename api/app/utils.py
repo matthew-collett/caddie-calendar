@@ -3,7 +3,6 @@ import random
 import re
 from datetime import datetime, timezone
 
-import pytz
 from cryptography.fernet import Fernet
 
 
