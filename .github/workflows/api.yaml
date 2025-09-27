@@ -30,50 +30,79 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy Zappa
-        shell: bash
-        run: |
-          python -m pip install --upgrade pip
-          python -m venv .venv
-          source .venv/bin/activate
-          pip install -r requirements.txt
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-          cat > zappa_settings.json << EOL
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.PROJECT_NAME }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Create ECS task definition
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.PROJECT_NAME }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cat > task-definition.json << EOL
           {
-            "production": {
-              "app_function": "run.app",
-              "domain": "${{ secrets.DOMAIN }}",
-              "route53": true,
-              "certificate_arn": "${{ secrets.CERTIFICATE_ARN }}",
-              "base_path": "",
-              "aws_region": "${{ secrets.AWS_REGION }}",
-              "manage_roles": true,
-              "role_name": "${{ secrets.PROJECT_NAME }}-production-ZappaLambdaExecutionRole",
-              "project_name": "${{ secrets.PROJECT_NAME }}",
-              "runtime": "python3.12",
-              "s3_bucket": "${{ secrets.PROJECT_NAME }}",
-              "environment_variables": {
-                "SECRET_KEY": "${{ secrets.SECRET_KEY }}",
-                "SESSION_NAME_KEY": "${{ secrets.SESSION_NAME_KEY }}",
-                "FERNET_KEY": "${{ secrets.FERNET_KEY }}",
-                "CSRF_SCRIPT_NAME": "${{ secrets.CSRF_SCRIPT_NAME }}",
-                "SQLALCHEMY_DATABASE_URI": "${{ secrets.SQLALCHEMY_DATABASE_URI }}",
-                "CLUB_ID": "${{ secrets.CLUB_ID }}",
-                "CLUB_NAME": "${{ secrets.CLUB_NAME }}",
-                "COURSE_ID": "${{ secrets.COURSE_ID }}",
-                "PROXY_URL": "${{ secrets.PROXY_URL }}",
-                "PROXY_LOGIN": "${{ secrets.PROXY_LOGIN }}",
-                "PROXY_LOGOUT": "${{ secrets.PROXY_LOGOUT }}",
-                "PROXY_HOME": "${{ secrets.PROXY_HOME }}",
-                "PROXY_SEARCH": "${{ secrets.PROXY_SEARCH }}",
-                "PROXY_PEOPLE": "${{ secrets.PROXY_PEOPLE }}",
-                "PROXY_RESERVE": "${{ secrets.PROXY_RESERVE }}",
-                "PROXY_REFERER": "${{ secrets.PROXY_REFERER }}",
-                "SOURCE": "${{ secrets.SOURCE }}",
-                "ALLOWED_ORIGINS": "${{ secrets.ALLOWED_ORIGINS }}"
+            "family": "${{ secrets.PROJECT_NAME }}",
+            "networkMode": "awsvpc",
+            "requiresCompatibilities": ["FARGATE"],
+            "cpu": "256",
+            "memory": "512",
+            "executionRoleArn": "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsTaskExecutionRole",
+            "taskRoleArn": "arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/ecsTaskRole",
+            "containerDefinitions": [
+              {
+                "name": "${{ secrets.PROJECT_NAME }}",
+                "image": "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG",
+                "portMappings": [{"containerPort": 8080, "protocol": "tcp"}],
+                "essential": true,
+                "logConfiguration": {
+                  "logDriver": "awslogs",
+                  "options": {
+                    "awslogs-group": "/ecs/${{ secrets.PROJECT_NAME }}",
+                    "awslogs-region": "${{ secrets.AWS_REGION }}",
+                    "awslogs-stream-prefix": "ecs"
+                  }
+                },
+                "environment": [
+                  {"name": "SECRET_KEY", "value": "${{ secrets.SECRET_KEY }}"},
+                  {"name": "SESSION_NAME_KEY", "value": "${{ secrets.SESSION_NAME_KEY }}"},
+                  {"name": "FERNET_KEY", "value": "${{ secrets.FERNET_KEY }}"},
+                  {"name": "CSRF_SCRIPT_NAME", "value": "${{ secrets.CSRF_SCRIPT_NAME }}"},
+                  {"name": "SQLALCHEMY_DATABASE_URI", "value": "${{ secrets.SQLALCHEMY_DATABASE_URI }}"},
+                  {"name": "CLUB_ID", "value": "${{ secrets.CLUB_ID }}"},
+                  {"name": "CLUB_NAME", "value": "${{ secrets.CLUB_NAME }}"},
+                  {"name": "COURSE_ID", "value": "${{ secrets.COURSE_ID }}"},
+                  {"name": "PROXY_URL", "value": "${{ secrets.PROXY_URL }}"},
+                  {"name": "PROXY_LOGIN", "value": "${{ secrets.PROXY_LOGIN }}"},
+                  {"name": "PROXY_LOGOUT", "value": "${{ secrets.PROXY_LOGOUT }}"},
+                  {"name": "PROXY_HOME", "value": "${{ secrets.PROXY_HOME }}"},
+                  {"name": "PROXY_SEARCH", "value": "${{ secrets.PROXY_SEARCH }}"},
+                  {"name": "PROXY_PEOPLE", "value": "${{ secrets.PROXY_PEOPLE }}"},
+                  {"name": "PROXY_RESERVE", "value": "${{ secrets.PROXY_RESERVE }}"},
+                  {"name": "PROXY_REFERER", "value": "${{ secrets.PROXY_REFERER }}"},
+                  {"name": "SOURCE", "value": "${{ secrets.SOURCE }}"},
+                  {"name": "ALLOWED_ORIGINS", "value": "${{ secrets.ALLOWED_ORIGINS }}"}
+                ]
               }
-            }
+            ]
           }
           EOL
 
-          zappa update production
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ./api/task-definition.json
+          service: ${{ secrets.PROJECT_NAME }}
+          cluster: ${{ secrets.PROJECT_NAME }}
+          wait-for-service-stability: true
