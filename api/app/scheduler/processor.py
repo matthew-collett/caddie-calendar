@@ -48,10 +48,16 @@ def preflight(app):
                 )
                 continue
 
-            session_data = svc.sessions.get_session(user.id)
-            if session_data and svc.proxy.validate_session(session_data):
-                logger.info("Using existing valid session", extra={"user_id": user.id})
-            else:
+            # Find any valid session for this user or create a new one
+            user_sessions = svc.sessions.get_user_sessions(user.id)
+            session_data = None
+            for session in user_sessions:
+                if svc.proxy.validate_session(session):
+                    session_data = session
+                    logger.info("Using existing valid session", extra={"user_id": user.id})
+                    break
+
+            if not session_data:
                 password = utils.decrypt(app.config["FERNET_KEY"], user.password_hash)
                 session_data = svc.proxy.login(user.email, password)
                 if session_data:

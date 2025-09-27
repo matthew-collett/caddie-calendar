@@ -32,37 +32,38 @@ def login():
     if session_data is None:
         return jsonify({"error": "Login failed"}), 401
 
-    svc.sessions.store_session(user.id, session_data)
+    session_id = svc.sessions.store_session(user.id, session_data)
 
     token = jwt.encode(
         {
             "user_id": user.id,
+            "session_id": session_id,
             "email": email,
-            "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+            "exp": datetime.now(timezone.utc) + timedelta(hours=24),
         },
         app.config["SECRET_KEY"],
         algorithm="HS256",
     )
 
-    return jsonify({"token": token, "expires_in": 3600}), 200
+    return jsonify({"token": token, "expires_in": 86400}), 200
 
 
 @auth_bp.route("/logout", methods=["POST"])
 @require_auth
 def logout():
-    user_id = request.user_id
-    session_data = svc.sessions.get_session(user_id)
+    session_id = request.session_id
+    session_data = svc.sessions.get_session(session_id)
     if session_data:
         svc.proxy.logout(session_data)
-    svc.sessions.delete_session(user_id)
+    svc.sessions.delete_session(session_id)
     return jsonify({"success": True}), 200
 
 
 @auth_bp.route("/status", methods=["GET"])
 @require_auth
 def status():
-    user_id = request.user_id
-    session_data = svc.sessions.get_session(user_id)
+    session_id = request.session_id
+    session_data = svc.sessions.get_session(session_id)
     valid = svc.proxy.validate_session(session_data)
     if not valid:
         logout()

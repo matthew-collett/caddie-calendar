@@ -18,7 +18,7 @@ def get_user_by_id(user_id):
 @users_bp.route("", methods=["GET"])
 @require_auth
 def users():
-    session_data = svc.sessions.get_session(request.user_id)
+    session_data = svc.sessions.get_session(request.session_id)
 
     name_filter = request.args.get("name_filter")
     email = request.args.get("email")

@@ -38,6 +38,7 @@ def get_config(level):
             "urllib3": {"level": "WARNING"},
             "requests": {"level": "WARNING"},
             "werkzeug": {"level": "WARNING"},
+            "flask": {"level": "ERROR", "handlers": ["console"], "propagate": False},
         },
     }
 

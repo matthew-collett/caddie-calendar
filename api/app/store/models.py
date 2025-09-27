@@ -54,7 +54,7 @@ class User(db.Model):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utils.ensure_utc_now)
     bookings = relationship("Booking", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
-    session = relationship("Session", back_populates="user", uselist=False)
+    sessions = relationship("Session", back_populates="user")
 
     def to_dict(self):
         return {"id": self.id, "full_name": self.full_name, "email": self.email}
@@ -142,14 +142,15 @@ class Session(db.Model):
     __tablename__ = "sessions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
     user_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("users.id"), nullable=False, unique=True
+        Integer, ForeignKey("users.id"), nullable=False
     )
     session_data: Mapped[dict] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utils.ensure_utc_now)
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
-    user: Mapped["User"] = relationship("User", back_populates="session")
+    user: Mapped["User"] = relationship("User", back_populates="sessions")
 
     def is_expired(self):
         return datetime.now(timezone.utc).replace(tzinfo=None) > self.expires_at
