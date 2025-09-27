@@ -29,14 +29,16 @@ def init_app(app) -> BackgroundScheduler:
 
     scheduler.add_job(
         func=preflight,
-        trigger=CronTrigger(hour=17, minute=59, second=30),
+        trigger=CronTrigger(
+            hour=17, minute=59, second=30, timezone=app.config["TIMEZONE"]
+        ),
         id="preflight",
         replace_existing=True,
     )
 
     scheduler.add_job(
         func=process,
-        trigger=CronTrigger(hour=18, minute=0),
+        trigger=CronTrigger(hour=18, minute=0, timezone=app.config["TIMEZONE"]),
         id="process",
         replace_existing=True,
     )

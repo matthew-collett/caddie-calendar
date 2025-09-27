@@ -1,6 +1,7 @@
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
+import pytz
 from app import service as svc
 from app import utils
 from app.cache import cache
@@ -13,6 +14,7 @@ from app.scheduler.exceptions import (
     ProcessorError,
 )
 from app.store.models import NotificationType, Status
+from flask import current_app
 
 logger = get_logger(__name__)
 
@@ -23,14 +25,19 @@ def preflight(app):
     try:
         svc.sessions.cleanup_expired_sessions()
 
-        target_date = date.today() + timedelta(days=5)
+        local_tz = pytz.timezone(current_app.config["TIMEZONE"])
+        today = datetime.now(local_tz).date()
+        target_date = today + timedelta(days=5)
         pending_bookings = svc.bookings.get_bookings(
             status=Status.PENDING, booking_date=target_date
         )
         if not pending_bookings:
             logger.info(
                 "Found no pending bookings for target date",
-                extra={"date": date.today().isoformat(), "target_date": target_date},
+                extra={
+                    "date": today.isoformat(),
+                    "target_date": target_date.isoformat(),
+                },
             )
             cache.set("preflight", False)
             return
@@ -44,7 +51,7 @@ def preflight(app):
                     "Could not find user for booking",
                     extra={
                         **booking_data,
-                        "date": date.today().isoformat(),
+                        "date": today.isoformat(),
                         "target_date": target_date,
                     },
                 )
@@ -76,13 +83,19 @@ def preflight(app):
         cache.set("preflight", True)
         logger.info(
             f"Cached {len(bookings_to_cache)} bookings for processing",
-            extra={"date": date.today().isoformat(), "target_date": target_date},
+            extra={
+                "date": datetime.now(local_tz).date().isoformat(),
+                "target_date": target_date.isoformat(),
+            },
         )
 
     except Exception:
         logger.exception(
             "Preflight job failed",
-            extra={"date": date.today().isoformat(), "target_date": target_date},
+            extra={
+                "date": datetime.now(local_tz).date().isoformat(),
+                "target_date": target_date.isoformat(),
+            },
         )
         cache.set("preflight", False)
 
@@ -95,9 +108,10 @@ def process(app):
     logger.info("Starting process job")
     bookings = cache.get("bookings")
     if not bookings:
+        today = datetime.now(pytz.timezone(current_app.config["TIMEZONE"])).date()
         logger.info(
             "Skipping processing; No bookings made",
-            extra={"date": date.today().isoformat()},
+            extra={"date": today.isoformat()},
         )
         return
 

@@ -27,7 +27,6 @@ class JSONFormatter(logging.Formatter):
             "line": record.lineno,
         }
 
-        # Add HTTP request fields if present
         http_fields = [
             "method",
             "path",

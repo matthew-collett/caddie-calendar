@@ -153,4 +153,4 @@ class Session(db.Model):
     user: Mapped["User"] = relationship("User", back_populates="sessions")
 
     def is_expired(self):
-        return datetime.now(timezone.utc).replace(tzinfo=None) > self.expires_at
+        return utils.ensure_utc_now() > self.expires_at

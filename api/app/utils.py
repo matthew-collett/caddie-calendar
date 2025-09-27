@@ -3,6 +3,7 @@ import random
 import re
 from datetime import datetime, timezone
 
+import pytz
 from cryptography.fernet import Fernet
 
 
@@ -50,7 +51,6 @@ def to_utc_datetime(dt):
     if dt is None:
         return None
     if dt.tzinfo is None:
-        # Assume naive datetime is already UTC
         return dt.replace(tzinfo=timezone.utc)
     return dt.astimezone(timezone.utc)
 

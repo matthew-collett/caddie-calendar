@@ -21,10 +21,8 @@ class Config(BaseSettings):
     PROXY_RESERVE: str
     PROXY_REFERER: str
     SOURCE: str
+    TIMEZONE: str
     ALLOWED_ORIGINS: str = "http://localhost:5173"
     REQUEST_TIMEOUT: int = 10
     LOG_LEVEL: str = "INFO"
-    SQLALCHEMY_ENGINE_OPTIONS: dict = {
-        "pool_pre_ping": True,
-        "pool_recycle": 300
-    }
+    SQLALCHEMY_ENGINE_OPTIONS: dict = {"pool_pre_ping": True, "pool_recycle": 300}
