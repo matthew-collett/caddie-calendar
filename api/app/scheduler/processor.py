@@ -4,7 +4,7 @@ from datetime import date, timedelta
 from app import service as svc
 from app import utils
 from app.cache import cache
-from app.logger import logger
+from app.logger import get_logger
 from app.scheduler.exceptions import (
     AllFailedError,
     AuthenticationFailedError,
@@ -13,6 +13,8 @@ from app.scheduler.exceptions import (
     ProcessorError,
 )
 from app.store.models import NotificationType, Status
+
+logger = get_logger(__name__)
 
 
 def preflight(app):
@@ -48,13 +50,14 @@ def preflight(app):
                 )
                 continue
 
-            # Find any valid session for this user or create a new one
             user_sessions = svc.sessions.get_user_sessions(user.id)
             session_data = None
             for session in user_sessions:
                 if svc.proxy.validate_session(session):
                     session_data = session
-                    logger.info("Using existing valid session", extra={"user_id": user.id})
+                    logger.info(
+                        "Using existing valid session", extra={"user_id": user.id}
+                    )
                     break
 
             if not session_data:

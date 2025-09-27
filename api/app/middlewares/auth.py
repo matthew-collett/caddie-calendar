@@ -18,7 +18,7 @@ def require_auth(f):
             payload = jwt.decode(token, app.config["SECRET_KEY"], algorithms=["HS256"])
             session_data = svc.sessions.get_session(payload["session_id"])
             if not session_data:
-                return jsonify({"error": "Cannot find session"}), 401
+                return jsonify({"error": "Session expired, please login again"}), 401
             request.user_id = payload["user_id"]
             request.session_id = payload["session_id"]
             request.email = payload["email"]

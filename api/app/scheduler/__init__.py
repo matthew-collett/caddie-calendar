@@ -1,11 +1,13 @@
 import atexit
 
-from app.logger import logger
+from app.logger import get_logger
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from .processor import preflight as pre
 from .processor import process as proc
+
+logger = get_logger(__name__)
 
 
 def init_app(app) -> BackgroundScheduler:
