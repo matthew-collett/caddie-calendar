@@ -105,4 +105,3 @@ jobs:
           task-definition: ./api/task-definition.json
           service: ${{ secrets.PROJECT_NAME }}
           cluster: ${{ secrets.PROJECT_NAME }}
-          wait-for-service-stability: true
