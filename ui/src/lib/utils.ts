@@ -46,9 +46,8 @@ export const formatOptionalTime = (isoTimeString: string | null | undefined) => 
 
 export const convertTo24Hour = (time12h: string) => {
   try {
-    const today = new Date()
-    const timeDate = new Date(`${format(today, 'yyyy-MM-dd')} ${time12h}`)
-    return format(timeDate, 'HH:mm:ss')
+    const parsed = parse(time12h, 'h:mm a', new Date())
+    return format(parsed, 'HH:mm:ss')
   } catch {
     return time12h
   }

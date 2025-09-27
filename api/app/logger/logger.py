@@ -2,7 +2,9 @@ import json
 import logging
 import logging.config
 import sys
+import time
 from datetime import datetime, timezone
+from flask import request, g
 
 
 class JSONFormatter(logging.Formatter):
@@ -54,6 +56,23 @@ def init(level):
 def init_app(app):
     init(app.config["LOG_LEVEL"])
     app.logger = logging.getLogger("flask")
+
+    @app.before_request
+    def before_request():
+        g.start_time = time.time()
+
+    @app.after_request
+    def after_request(response):
+        duration = time.time() - g.start_time
+        logger.info("HTTP request", extra={
+            "method": request.method,
+            "path": request.path,
+            "status_code": response.status_code,
+            "duration_ms": round(duration * 1000, 2),
+            "remote_addr": request.remote_addr,
+            "user_agent": request.headers.get('User-Agent', '')
+        })
+        return response
 
 
 logger = logging.getLogger("app")
