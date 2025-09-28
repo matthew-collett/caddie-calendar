@@ -26,8 +26,7 @@ def preflight(app):
     try:
         svc.sessions.cleanup_expired_sessions()
 
-        local_tz = pytz.timezone(current_app.config["TIMEZONE"])
-        today = datetime.now(local_tz).date()
+        today = date.today()
         target_date = today + timedelta(days=5)
         pending_bookings = svc.bookings.get_bookings(
             status=Status.PENDING, booking_date=target_date
@@ -85,7 +84,7 @@ def preflight(app):
         logger.info(
             f"Cached {len(bookings_to_cache)} bookings for processing",
             extra={
-                "date": datetime.now(local_tz).date().isoformat(),
+                "date": today.isoformat(),
                 "target_date": target_date.isoformat(),
             },
         )
@@ -94,7 +93,7 @@ def preflight(app):
         logger.exception(
             "Preflight job failed",
             extra={
-                "date": datetime.now(local_tz).date().isoformat(),
+                "date": today.isoformat(),
                 "target_date": target_date.isoformat(),
             },
         )
@@ -109,7 +108,7 @@ def process(app):
     logger.info("Starting process job")
     bookings = cache.get("bookings")
     if not bookings:
-        today = datetime.now(pytz.timezone(current_app.config["TIMEZONE"])).date()
+        today = date.today()
         logger.info(
             "Skipping processing; No bookings made",
             extra={"date": today.isoformat()},
