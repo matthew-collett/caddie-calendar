@@ -1,3 +1,4 @@
+import threading
 import time
 from datetime import date, datetime, timedelta
 
@@ -115,14 +116,24 @@ def process(app):
         )
         return
 
+    def worker(booking):
+        with app.app_context():
+            start_time = time.time()
+            process0(booking)
+            duration = time.time() - start_time
+            logger.info(
+                f"Booking processed in {duration:.2f} seconds",
+                extra={**booking, "duration_seconds": duration},
+            )
+
+    threads = []
     for booking in bookings:
-        start_time = time.time()
-        process0(booking)
-        duration = time.time() - start_time
-        logger.info(
-            f"Booking processed in {duration:.2f} seconds",
-            extra={**booking, "duration_seconds": duration},
-        )
+        thread = threading.Thread(target=worker, args=(booking,))
+        thread.start()
+        threads.append(thread)
+
+    for thread in threads:
+        thread.join()
 
 
 def process0(booking):
