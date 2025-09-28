@@ -51,13 +51,14 @@ class User(db.Model):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     affiliation_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utils.ensure_utc_now)
+    timezone: Mapped[str] = mapped_column(String(50), nullable=False, default="America/Halifax")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utils.ensure_utc_now)
     bookings = relationship("Booking", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
     sessions = relationship("Session", back_populates="user")
 
     def to_dict(self):
-        return {"id": self.id, "full_name": self.full_name, "email": self.email}
+        return {"id": self.id, "full_name": self.full_name, "email": self.email, "timezone": self.timezone}
 
 
 class Booking(db.Model):
@@ -77,8 +78,8 @@ class Booking(db.Model):
     booking_id: Mapped[str] = mapped_column(String(100), nullable=True)
     actual_time: Mapped[time] = mapped_column(Time, nullable=True)
     error_details: Mapped[str] = mapped_column(Text, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utils.ensure_utc_now)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utils.ensure_utc_now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utils.ensure_utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utils.ensure_utc_now)
     user = relationship("User", back_populates="bookings")
 
     def get_players(self) -> List[Player]:
@@ -121,7 +122,7 @@ class Notification(db.Model):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utils.ensure_utc_now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utils.ensure_utc_now)
     user = relationship("User", back_populates="notifications")
     booking = relationship("Booking")
 
@@ -147,8 +148,8 @@ class Session(db.Model):
         Integer, ForeignKey("users.id"), nullable=False
     )
     session_data: Mapped[dict] = mapped_column(JSON, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=utils.ensure_utc_now)
-    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utils.ensure_utc_now)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     user: Mapped["User"] = relationship("User", back_populates="sessions")
 

@@ -4,7 +4,6 @@ import { Toaster as Sonner, type ToasterProps } from "sonner"
 const Toaster = ({ ...props }: ToasterProps) => {
   const { theme } = useTheme()
 
-  // Handle system theme by checking actual applied theme
   const resolvedTheme = theme === "system" 
     ? window.document.documentElement.classList.contains('dark') ? 'dark' : 'light'
     : theme

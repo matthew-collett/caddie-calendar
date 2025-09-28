@@ -4,7 +4,7 @@ import { Button, Popover, PopoverContent, PopoverTrigger, Badge } from '@/compon
 import { api } from '@/lib/api'
 import { type Notification } from '@/lib/types'
 import { useIsMobile, useNotifications } from '@/hooks'
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, parseISO } from 'date-fns'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 
 const NOTIFICATION_QUERIES = {
@@ -117,7 +117,7 @@ export const NotificationBell = () => {
               <p className="text-xs text-foreground">Click to view details</p>
             )}
             <p className="text-xs text-muted-foreground mt-1">
-              {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+              {formatDistanceToNow(parseISO(notification.created_at), { addSuffix: true })}
             </p>
           </div>
           {!notification.is_read && (

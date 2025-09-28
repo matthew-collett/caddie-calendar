@@ -18,7 +18,7 @@ export const formatDate = (isoDateString: string) => {
 export const formatTime = (isoTimeString: string) => {
   try {
     // Parse time string into a date object for formatting
-    const parsed = parse(isoTimeString, 'HH:mm:ss', new Date())
+    const parsed = parse(isoTimeString, 'HH:mm:ss', new Date(2000, 0, 1))
     return format(parsed, 'h:mm a')
   } catch {
     return isoTimeString
@@ -46,7 +46,7 @@ export const formatOptionalTime = (isoTimeString: string | null | undefined) => 
 
 export const convertTo24Hour = (time12h: string) => {
   try {
-    const parsed = parse(time12h, 'h:mm a', new Date())
+    const parsed = parse(time12h, 'h:mm a', new Date(2000, 0, 1))
     return format(parsed, 'HH:mm:ss')
   } catch {
     return time12h
