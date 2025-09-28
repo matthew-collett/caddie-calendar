@@ -51,14 +51,13 @@ class User(db.Model):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     affiliation_id: Mapped[int] = mapped_column(Integer, nullable=False)
-    timezone: Mapped[str] = mapped_column(String(50), nullable=False, default="America/Halifax")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utils.ensure_utc_now)
     bookings = relationship("Booking", back_populates="user")
     notifications = relationship("Notification", back_populates="user")
     sessions = relationship("Session", back_populates="user")
 
     def to_dict(self):
-        return {"id": self.id, "full_name": self.full_name, "email": self.email, "timezone": self.timezone}
+        return {"id": self.id, "full_name": self.full_name, "email": self.email}
 
 
 class Booking(db.Model):
