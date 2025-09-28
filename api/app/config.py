@@ -21,7 +21,6 @@ class Config(BaseSettings):
     PROXY_RESERVE: str
     PROXY_REFERER: str
     SOURCE: str
-    TIMEZONE: str
     ALLOWED_ORIGINS: str = "http://localhost:5173"
     REQUEST_TIMEOUT: int = 10
     LOG_LEVEL: str = "INFO"

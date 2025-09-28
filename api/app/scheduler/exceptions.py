@@ -3,17 +3,17 @@ class ProcessorError(Exception):
 
 
 class AuthenticationFailedError(ProcessorError):
-    def __init__(self, message="Failed to authenticate user credentials"):
+    def __init__(self, message="Failed to authenticate"):
         super().__init__(message)
 
 
 class NoneAvailableError(ProcessorError):
-    def __init__(self, message="No booking times are available for the requested date"):
+    def __init__(self, message="Could not find any times to book"):
         super().__init__(message)
 
 
 class NoneDesiredError(ProcessorError):
-    def __init__(self, message="No available time slots match the desired criteria"):
+    def __init__(self, message="Could not find any available times to book"):
         super().__init__(message)
 
 
