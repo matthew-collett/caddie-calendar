@@ -24,4 +24,5 @@ class Config(BaseSettings):
     ALLOWED_ORIGINS: str = "http://localhost:5173"
     REQUEST_TIMEOUT: int = 10
     LOG_LEVEL: str = "INFO"
+    TIMEZONE: str
     SQLALCHEMY_ENGINE_OPTIONS: dict = {"pool_pre_ping": True, "pool_recycle": 300}
