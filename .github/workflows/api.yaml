@@ -92,7 +92,8 @@ jobs:
                   {"name": "PROXY_RESERVE", "value": "${{ secrets.PROXY_RESERVE }}"},
                   {"name": "PROXY_REFERER", "value": "${{ secrets.PROXY_REFERER }}"},
                   {"name": "SOURCE", "value": "${{ secrets.SOURCE }}"},
-                  {"name": "ALLOWED_ORIGINS", "value": "${{ secrets.ALLOWED_ORIGINS }}"}
+                  {"name": "ALLOWED_ORIGINS", "value": "${{ secrets.ALLOWED_ORIGINS }}"},
+                  {"name": "TIMEZONE", "value": "${{ secrets.TIMEZONE }}"}
                 ]
               }
             ]
