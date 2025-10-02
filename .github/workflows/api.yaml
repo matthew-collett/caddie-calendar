@@ -76,7 +76,6 @@ jobs:
                 },
                 "environment": [
                   {"name": "SECRET_KEY", "value": "${{ secrets.SECRET_KEY }}"},
-                  {"name": "SESSION_NAME_KEY", "value": "${{ secrets.SESSION_NAME_KEY }}"},
                   {"name": "FERNET_KEY", "value": "${{ secrets.FERNET_KEY }}"},
                   {"name": "CSRF_SCRIPT_NAME", "value": "${{ secrets.CSRF_SCRIPT_NAME }}"},
                   {"name": "SQLALCHEMY_DATABASE_URI", "value": "${{ secrets.SQLALCHEMY_DATABASE_URI }}"},

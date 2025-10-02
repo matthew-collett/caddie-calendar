@@ -3,7 +3,6 @@ from pydantic_settings import BaseSettings
 
 class Config(BaseSettings):
     SECRET_KEY: str
-    SESSION_NAME_KEY: str
     FERNET_KEY: str
     CSRF_SCRIPT_NAME: str
     SQLALCHEMY_DATABASE_URI: str

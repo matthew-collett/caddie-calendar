@@ -1,6 +1,6 @@
 from urllib.parse import unquote
 
-import requests
+from curl_cffi import requests
 from app import utils
 from app.logger import get_logger
 from flask import current_app as app
@@ -13,33 +13,53 @@ def login(email, password):
         proxy_url = app.config["PROXY_URL"]
         session = requests.Session()
 
-        response = session.get(proxy_url, timeout=app.config["REQUEST_TIMEOUT"])
+        logger.info("[Proxy Request] GET /")
+        response = session.get(
+            proxy_url,
+            timeout=app.config["REQUEST_TIMEOUT"],
+            impersonate="firefox133"
+        )
+        logger.info(
+            f"[Proxy Request] GET / - Status: {response.status_code}, Length: {len(response.text)}"
+        )
+
+        if not response.ok:
+            logger.error(
+                f"[Proxy Request] GET / - HTTP {response.status_code}: {response.text[:1000]}"
+            )
+            return None
+
         csrf_token = utils.get_csrf_token(response.text, app.config["CSRF_SCRIPT_NAME"])
         if not csrf_token:
             return None
 
+        endpoint = app.config['PROXY_LOGIN']
+        logger.info(f"[Proxy Request] POST {endpoint}")
         response = session.post(
-            f"{proxy_url}{app.config['PROXY_LOGIN']}",
+            f"{proxy_url}{endpoint}",
             json={"session": {"email": email, "password": password}},
             headers={
-                "User-Agent": utils.get_user_agent(),
                 "Accept": "application/json",
                 "Content-Type": "application/json",
                 "Origin": proxy_url,
             },
             timeout=app.config["REQUEST_TIMEOUT"],
+            impersonate="firefox133"
+        )
+        logger.info(
+            f"[Proxy Request] POST {endpoint} - Status: {response.status_code}, Length: {len(response.text)}"
         )
 
         if not response.ok:
+            logger.error(
+                f"[Proxy Request] POST {endpoint} - HTTP {response.status_code}: {response.text[:1000]}"
+            )
             return None
 
-        cookie = response.cookies.get(app.config["SESSION_NAME_KEY"])
-        if not cookie:
-            return None
-
-        return {"cookie": cookie, "csrf_token": csrf_token}
+        return {"cookies": dict(session.cookies), "csrf_token": csrf_token}
 
     except Exception:
+        logger.exception(f"[Proxy Request] POST {app.config['PROXY_LOGIN']}")
         return None
 
 
@@ -88,7 +108,10 @@ def search_users(session_data, name_filter=None, email=None):
 
 
 def warm_session(session_data, booking, teetime_id):
-    new_session_data = session_data.copy()
+    new_session_data = {
+        "cookies": session_data["cookies"].copy(),
+        "csrf_token": session_data["csrf_token"]
+    }
 
     options = _request(
         new_session_data,
@@ -113,11 +136,7 @@ def warm_session(session_data, booking, teetime_id):
     if not (options and options.ok):
         return None, None
 
-    cookie = options.cookies.get(app.config["SESSION_NAME_KEY"])
-    if not cookie:
-        return None, None
-
-    new_session_data["cookie"] = cookie
+    new_session_data["cookies"].update(options.cookies)
 
     try:
         rounds_attributes = []
@@ -216,10 +235,9 @@ def _request(session_data, method, endpoint, **kwargs):
     try:
         default_headers = {
             "X-CSRF-Token": session_data["csrf_token"],
-            "User-Agent": utils.get_user_agent(),
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "Referer": app.config["PROXY_URL"],
+            "Referer": f"{app.config['PROXY_URL']}/dashboard/",
             "Sec-Fetch-Dest": "empty",
             "Sec-Fetch-Mode": "cors",
             "Sec-Fetch-Site": "same-origin",
@@ -228,17 +246,20 @@ def _request(session_data, method, endpoint, **kwargs):
             "Connection": "keep-alive",
             "Accept-Language": "en-CA,en-US;q=0.7,en;q=0.3",
             "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Priority": "u=0",
+            "Pragma": "no-cache",
+            "Cache-Control": "no-cache",
         }
 
         headers = {**default_headers, **kwargs.pop("headers", {})}
 
-        cookies = {app.config["SESSION_NAME_KEY"]: session_data["cookie"]}
+        cookies = session_data["cookies"]
         if "timeout" not in kwargs:
             kwargs["timeout"] = app.config["REQUEST_TIMEOUT"]
 
-        logger.info(f"{method} {endpoint}")
+        logger.info(f"[Proxy Request] {method} {endpoint}")
         response = requests.request(
-            method, url, headers=headers, cookies=cookies, **kwargs
+            method, url, headers=headers, cookies=cookies, impersonate="firefox133", **kwargs
         )
         logger.info(
             f"[Proxy Request] {method} {endpoint} - Status: {response.status_code}, Length: {len(response.text)}"

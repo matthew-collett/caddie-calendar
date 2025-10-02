@@ -27,12 +27,6 @@ def get_csrf_token(html, script_name):
         return None
 
 
-def get_user_agent():
-    return random.choice(
-        ["Chrome/120.0.0.0", "Firefox/115.0", "Safari/17.0", "Edge/119.0.0.0"]
-    )
-
-
 def is_slot_available(slot):
     return not slot.get("out_of_capacity", True)
 

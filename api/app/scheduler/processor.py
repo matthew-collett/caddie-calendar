@@ -137,22 +137,26 @@ def process(app):
 
 def process0(booking):
     try:
+        initial_delay = random.uniform(0.05, 0.2)
+        time.sleep(initial_delay)
+
         sessions = cache.get("sessions") or {}
         session_data = sessions.get(booking["id"])
         if not session_data:
             raise AuthenticationFailedError
 
-        # Retry with exponential backoff if times aren't available yet
         available_times = None
-        max_retries = 5
+        max_retries = 3
         for attempt in range(max_retries):
             available_times = svc.proxy.get_available_times(session_data, booking)
             if available_times:
                 break
             if attempt < max_retries - 1:
-                delay = (2**attempt) * 0.2  # 0.2s, 0.4s, 0.8s, 1.6s
+                base_delay = (2**attempt) * 0.3
+                jitter = random.uniform(0.8, 1.2)
+                delay = base_delay * jitter
                 logger.info(
-                    f"No times available, retrying in {delay}s (attempt {attempt + 1}/{max_retries})"
+                    f"No times available, retrying in {delay:.2f}s (attempt {attempt + 1}/{max_retries})"
                 )
                 time.sleep(delay)
 
