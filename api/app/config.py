@@ -15,7 +15,6 @@ class Config(BaseSettings):
     PROXY_URL: str
     PROXY_LOGIN: str
     PROXY_LOGOUT: str
-    PROXY_HOME: str
     PROXY_SEARCH: str
     PROXY_PEOPLE: str
     PROXY_RESERVE: str

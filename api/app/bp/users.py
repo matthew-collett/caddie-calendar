@@ -29,12 +29,11 @@ def users():
             400,
         )
 
-    response = svc.proxy.search_users(
+    users = svc.proxy.search_users(
         session_data, name_filter=name_filter, email=email
     )
 
-    if not response.ok:
+    if not users:
         return jsonify({"error": "Failed to fetch users"}), 500
 
-    users = response.json()
     return jsonify(users), 200

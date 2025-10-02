@@ -62,8 +62,7 @@ def logout():
 @auth_bp.route("/status", methods=["GET"])
 @require_auth
 def status():
-    session_id = request.session_id
-    session_data = svc.sessions.get_session(session_id)
+    session_data = svc.sessions.get_session(request.session_id)
     valid = svc.proxy.validate_session(session_data)
     if not valid:
         logout()

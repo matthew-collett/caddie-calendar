@@ -86,7 +86,6 @@ jobs:
                   {"name": "PROXY_URL", "value": "${{ secrets.PROXY_URL }}"},
                   {"name": "PROXY_LOGIN", "value": "${{ secrets.PROXY_LOGIN }}"},
                   {"name": "PROXY_LOGOUT", "value": "${{ secrets.PROXY_LOGOUT }}"},
-                  {"name": "PROXY_HOME", "value": "${{ secrets.PROXY_HOME }}"},
                   {"name": "PROXY_SEARCH", "value": "${{ secrets.PROXY_SEARCH }}"},
                   {"name": "PROXY_PEOPLE", "value": "${{ secrets.PROXY_PEOPLE }}"},
                   {"name": "PROXY_RESERVE", "value": "${{ secrets.PROXY_RESERVE }}"},

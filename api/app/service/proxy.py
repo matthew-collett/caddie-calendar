@@ -1,6 +1,11 @@
+from urllib.parse import unquote
+
 import requests
 from app import utils
+from app.logger import get_logger
 from flask import current_app as app
+
+logger = get_logger(__name__)
 
 
 def login(email, password):
@@ -43,15 +48,21 @@ def logout(session_data):
 
 
 def validate_session(session_data):
-    response = _request(session_data, "GET", app.config["PROXY_HOME"])
-    return response is not None and response.status_code != 302
+    response = _request(session_data, "GET", app.config["PROXY_LOGIN"])
+    return response is not None and response.status_code == 200
 
 
 def get_available_times(session_data, booking):
     club_id = app.config["CLUB_ID"]
     course_id = app.config["COURSE_ID"]
+
+    affiliation_id = next(
+        p["affiliation_id"]
+        for p in booking["players"]
+        if p["user_id"] == booking["user_id"]
+    )
     affiliations = "&".join(
-        [f"affiliation_type_ids[]={p['affiliation_id']}" for p in booking["players"]]
+        [f"affiliation_type_ids[]={affiliation_id}"] * len(booking["players"])
     )
 
     endpoint = f"{app.config["PROXY_SEARCH"].format(club_id=club_id)}?date={booking['booking_date']}&course_id={course_id}&{affiliations}&nb_holes={booking['holes']}"
@@ -74,17 +85,12 @@ def search_users(session_data, name_filter=None, email=None):
     endpoint = (
         f"{app.config['PROXY_PEOPLE'].format(club_id=club_id)}?club_id={club_id}&q={q}"
     )
-    return _request(session_data, "GET", endpoint)
+    response = _request(session_data, "GET", endpoint)
+    return response.json() if response and response.ok else None
 
 
 def warm_session(session_data, booking, teetime_id):
     new_session_data = session_data.copy()
-
-    def update_session_cookie(response):
-        if cookie := response.cookies.get(app.config["SESSION_NAME_KEY"]):
-            new_session_data["cookie"] = cookie
-            return True
-        return False
 
     options = _request(
         new_session_data,
@@ -106,8 +112,14 @@ def warm_session(session_data, booking, teetime_id):
         },
     )
 
-    if not (options and options.ok and update_session_cookie(options)):
+    if not (options and options.ok):
         return None, None
+
+    cookie = options.cookies.get(app.config["SESSION_NAME_KEY"])
+    if not cookie:
+        return None, None
+
+    new_session_data["cookie"] = cookie
 
     try:
         rounds_attributes = []
@@ -197,14 +209,13 @@ def reserve(session_data, booking, teetime_id, rounds_attributes):
         headers={"Referer": app.config["PROXY_REFERER"]},
     )
 
-    if not (response and response.ok):
-        return False
-    return True
+    return response is not None and response.ok
 
 
 def _request(session_data, method, endpoint, **kwargs):
+    url = f"{app.config['PROXY_URL']}{endpoint}"
+
     try:
-        url = f"{app.config['PROXY_URL']}{endpoint}"
         default_headers = {
             "X-CSRF-Token": session_data["csrf_token"],
             "User-Agent": utils.get_user_agent(),
@@ -221,13 +232,26 @@ def _request(session_data, method, endpoint, **kwargs):
             "Accept-Encoding": "gzip, deflate, br, zstd",
         }
 
-        passed_headers = kwargs.pop("headers", {})
-        headers = {**default_headers, **passed_headers}
+        headers = {**default_headers, **kwargs.pop("headers", {})}
 
         cookies = {app.config["SESSION_NAME_KEY"]: session_data["cookie"]}
         if "timeout" not in kwargs:
             kwargs["timeout"] = app.config["REQUEST_TIMEOUT"]
-        return requests.request(method, url, headers=headers, cookies=cookies, **kwargs)
+
+        logger.info(f"{method} {endpoint}")
+        response = requests.request(
+            method, url, headers=headers, cookies=cookies, **kwargs
+        )
+        logger.info(
+            f"[Proxy Request] {method} {endpoint} - Status: {response.status_code}, Length: {len(response.text)}"
+        )
+
+        if not response.ok:
+            logger.error(
+                f"[Proxy Request] {method} {endpoint} - HTTP {response.status_code}: {response.text[:1000]}"
+            )
+
+        return response
     except Exception:
-        app.logger.exception(f"Request failed to {endpoint}")
+        logger.exception(f"[Proxy Request] {method} {endpoint}")
         return None
