@@ -56,13 +56,11 @@ def get_available_times(session_data, booking):
     club_id = app.config["CLUB_ID"]
     course_id = app.config["COURSE_ID"]
 
-    affiliation_id = next(
-        p["affiliation_id"]
-        for p in booking["players"]
-        if p["user_id"] == booking["user_id"]
+    owner_affiliation_id = next(
+        p["affiliation_id"] for p in booking["players"] if p["user_id"] == booking["user_id"]
     )
     affiliations = "&".join(
-        [f"affiliation_type_ids[]={affiliation_id}"] * len(booking["players"])
+        [f"affiliation_type_ids[]={owner_affiliation_id}"] * len(booking["players"])
     )
 
     endpoint = f"{app.config["PROXY_SEARCH"].format(club_id=club_id)}?date={booking['booking_date']}&course_id={course_id}&{affiliations}&nb_holes={booking['holes']}"

@@ -142,7 +142,20 @@ def process0(booking):
         if not session_data:
             raise AuthenticationFailedError
 
-        available_times = svc.proxy.get_available_times(session_data, booking)
+        # Retry with exponential backoff if times aren't available yet
+        available_times = None
+        max_retries = 5
+        for attempt in range(max_retries):
+            available_times = svc.proxy.get_available_times(session_data, booking)
+            if available_times:
+                break
+            if attempt < max_retries - 1:
+                delay = (2**attempt) * 0.2  # 0.2s, 0.4s, 0.8s, 1.6s
+                logger.info(
+                    f"No times available, retrying in {delay}s (attempt {attempt + 1}/{max_retries})"
+                )
+                time.sleep(delay)
+
         if not available_times:
             raise NoneAvailableError
 
