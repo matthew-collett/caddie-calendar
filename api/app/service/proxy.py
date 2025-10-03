@@ -1,8 +1,6 @@
-from urllib.parse import unquote
-
-from curl_cffi import requests
 from app import utils
 from app.logger import get_logger
+from curl_cffi import requests
 from flask import current_app as app
 
 logger = get_logger(__name__)
@@ -15,9 +13,7 @@ def login(email, password):
 
         logger.info("[Proxy Request] GET /")
         response = session.get(
-            proxy_url,
-            timeout=app.config["REQUEST_TIMEOUT"],
-            impersonate="firefox133"
+            proxy_url, timeout=app.config["REQUEST_TIMEOUT"], impersonate="firefox133"
         )
         logger.info(
             f"[Proxy Request] GET / - Status: {response.status_code}, Length: {len(response.text)}"
@@ -33,7 +29,7 @@ def login(email, password):
         if not csrf_token:
             return None
 
-        endpoint = app.config['PROXY_LOGIN']
+        endpoint = app.config["PROXY_LOGIN"]
         logger.info(f"[Proxy Request] POST {endpoint}")
         response = session.post(
             f"{proxy_url}{endpoint}",
@@ -44,7 +40,7 @@ def login(email, password):
                 "Origin": proxy_url,
             },
             timeout=app.config["REQUEST_TIMEOUT"],
-            impersonate="firefox133"
+            impersonate="firefox133",
         )
         logger.info(
             f"[Proxy Request] POST {endpoint} - Status: {response.status_code}, Length: {len(response.text)}"
@@ -77,7 +73,9 @@ def get_available_times(session_data, booking):
     course_id = app.config["COURSE_ID"]
 
     owner_affiliation_id = next(
-        p["affiliation_id"] for p in booking["players"] if p["user_id"] == booking["user_id"]
+        p["affiliation_id"]
+        for p in booking["players"]
+        if p["user_id"] == booking["user_id"]
     )
     affiliations = "&".join(
         [f"affiliation_type_ids[]={owner_affiliation_id}"] * len(booking["players"])
@@ -110,7 +108,7 @@ def search_users(session_data, name_filter=None, email=None):
 def warm_session(session_data, booking, teetime_id):
     new_session_data = {
         "cookies": session_data["cookies"].copy(),
-        "csrf_token": session_data["csrf_token"]
+        "csrf_token": session_data["csrf_token"],
     }
 
     options = _request(
@@ -259,7 +257,12 @@ def _request(session_data, method, endpoint, **kwargs):
 
         logger.info(f"[Proxy Request] {method} {endpoint}")
         response = requests.request(
-            method, url, headers=headers, cookies=cookies, impersonate="firefox133", **kwargs
+            method,
+            url,
+            headers=headers,
+            cookies=cookies,
+            impersonate="firefox133",
+            **kwargs,
         )
         logger.info(
             f"[Proxy Request] {method} {endpoint} - Status: {response.status_code}, Length: {len(response.text)}"

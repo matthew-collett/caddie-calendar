@@ -1,7 +1,6 @@
 import json
 import logging
 import logging.config
-import sys
 import time
 from datetime import datetime, timezone
 

@@ -1,8 +1,8 @@
+import random
 import threading
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
-import pytz
 from app import service as svc
 from app import utils
 from app.cache import cache
@@ -15,7 +15,6 @@ from app.scheduler.exceptions import (
     ProcessorError,
 )
 from app.store.models import NotificationType, Status
-from flask import current_app
 
 logger = get_logger(__name__)
 
