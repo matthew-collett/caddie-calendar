@@ -327,7 +327,7 @@ export const BookingsView = ({ onViewChange }: BookingsViewProps) => {
                 {futureBookings
                   .sort(
                     (a, b) =>
-                      parseISO(a.booking_date).getTime() - parseISO(b.booking_date).getTime()
+                      parseISO(b.booking_date).getTime() - parseISO(a.booking_date).getTime()
                   )
                   .map(booking => (
                     <BookingCard key={booking.id} booking={booking} />
