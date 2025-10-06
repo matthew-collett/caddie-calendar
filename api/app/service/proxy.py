@@ -59,10 +59,6 @@ def login(email, password):
         return None
 
 
-def logout(session_data):
-    _request(session_data, "GET", app.config["PROXY_LOGOUT"])
-
-
 def validate_session(session_data):
     response = _request(session_data, "GET", app.config["PROXY_LOGIN"])
     return response is not None and response.status_code == 200

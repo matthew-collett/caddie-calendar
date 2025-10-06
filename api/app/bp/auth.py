@@ -51,11 +51,7 @@ def login():
 @auth_bp.route("/logout", methods=["POST"])
 @require_auth
 def logout():
-    session_id = request.session_id
-    session_data = svc.sessions.get_session(session_id)
-    if session_data:
-        svc.proxy.logout(session_data)
-    svc.sessions.delete_session(session_id)
+    svc.sessions.delete_session(request.session_id)
     return jsonify({"success": True}), 200
 
 
