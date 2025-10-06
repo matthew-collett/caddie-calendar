@@ -26,8 +26,12 @@ def get_csrf_token(html, script_name):
         return None
 
 
-def is_slot_available(slot):
-    return not slot.get("out_of_capacity", True)
+def is_slot_available(slot, num_players):
+    return (
+        slot.get("active", False)
+        and not slot.get("blocked", True)
+        and slot.get("free_slots", 0) >= num_players
+    )
 
 
 def time_distance(slot_time, target_time):

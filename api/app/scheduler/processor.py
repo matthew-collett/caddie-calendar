@@ -90,7 +90,11 @@ def preflight(app):
                 }
                 continue
 
-            available_slots = [slot for slot in times if utils.is_slot_available(slot)]
+            available_slots = [
+                slot
+                for slot in times
+                if utils.is_slot_available(slot, len(booking_data["players"]))
+            ]
             if not available_slots:
                 logger.warning("No available slots", extra=booking_data)
                 bookings_cache[booking_id] = {
