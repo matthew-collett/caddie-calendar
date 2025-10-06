@@ -16,6 +16,7 @@ class Config(BaseSettings):
     PROXY_LOGOUT: str
     PROXY_SEARCH: str
     PROXY_PEOPLE: str
+    PROXY_FREEZE: str
     PROXY_RESERVE: str
     PROXY_REFERER: str
     SOURCE: str

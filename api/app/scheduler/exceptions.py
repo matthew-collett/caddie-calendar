@@ -2,21 +2,21 @@ class ProcessorError(Exception):
     pass
 
 
-class AuthenticationFailedError(ProcessorError):
-    def __init__(self, message="Failed to authenticate"):
+class SessionError(ProcessorError):
+    def __init__(self, message="Unable to authenticate - please verify your login credentials"):
         super().__init__(message)
 
 
-class NoneAvailableError(ProcessorError):
-    def __init__(self, message="Could not find any times to book"):
+class NoTimesError(ProcessorError):
+    def __init__(self, message="No tee times are available for your selected date"):
         super().__init__(message)
 
 
-class NoneDesiredError(ProcessorError):
-    def __init__(self, message="Could not find any available times to book"):
+class NoSlotsError(ProcessorError):
+    def __init__(self, message="No available tee times match your booking preferences"):
         super().__init__(message)
 
 
-class AllFailedError(ProcessorError):
-    def __init__(self, message="All booking attempts failed"):
+class AllReserveFailed(ProcessorError):
+    def __init__(self, message="Unable to secure any available tee times - all attempts were unsuccessful"):
         super().__init__(message)

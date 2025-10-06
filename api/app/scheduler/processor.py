@@ -1,4 +1,3 @@
-import random
 import threading
 import time
 from datetime import date, timedelta
@@ -8,11 +7,11 @@ from app import utils
 from app.cache import cache
 from app.logger import get_logger
 from app.scheduler.exceptions import (
-    AllFailedError,
-    AuthenticationFailedError,
-    NoneAvailableError,
-    NoneDesiredError,
+    AllReserveFailed,
+    NoSlotsError,
+    NoTimesError,
     ProcessorError,
+    SessionError,
 )
 from app.store.models import NotificationType, Status
 
@@ -22,14 +21,17 @@ logger = get_logger(__name__)
 def preflight(app):
     logger.info("Starting preflight job")
 
+    today = date.today()
+    target_date = today + timedelta(days=5)
+
     try:
         svc.sessions.cleanup_expired_sessions()
+        cache.set("bookings", {})
 
-        today = date.today()
-        target_date = today + timedelta(days=5)
         pending_bookings = svc.bookings.get_bookings(
             status=Status.PENDING, booking_date=target_date
         )
+
         if not pending_bookings:
             logger.info(
                 "Found no pending bookings for target date",
@@ -38,95 +40,121 @@ def preflight(app):
                     "target_date": target_date.isoformat(),
                 },
             )
-            cache.set("preflight", False)
             return
-        bookings_to_cache = []
-        sessions_to_cache = {}
+
+        bookings_cache = {}
+
         for booking in pending_bookings:
             booking_data = booking.to_dict()
+            booking_id = booking_data["id"]
+
             user = svc.users.get_user_by_id(booking.user_id)
             if not user:
-                logger.warning(
-                    "Could not find user for booking",
-                    extra={
-                        **booking_data,
-                        "date": today.isoformat(),
-                        "target_date": target_date,
-                    },
-                )
+                logger.warning("User not found", extra=booking_data)
+                bookings_cache[booking_id] = {
+                    "booking": booking_data,
+                    "error": SessionError("User not found"),
+                }
                 continue
 
-            user_sessions = svc.sessions.get_user_sessions(user.id)
-            session_data = None
-            for session in user_sessions:
-                if svc.proxy.validate_session(session):
-                    session_data = session
-                    logger.info(
-                        "Using existing valid session", extra={"user_id": user.id}
-                    )
-                    break
-
-            if not session_data:
-                password = utils.decrypt(app.config["FERNET_KEY"], user.password_hash)
-                session_data = svc.proxy.login(user.email, password)
-                if session_data:
-                    svc.sessions.store_session(user.id, session_data)
-                    logger.info("Created new session", extra={"user_id": user.id})
+            session_data = next(
+                (
+                    s
+                    for s in svc.sessions.get_user_sessions(user.id)
+                    if svc.proxy.validate_session(s)
+                ),
+                None,
+            )
 
             if session_data:
-                sessions_to_cache[booking_data["id"]] = session_data
+                logger.info("Using existing session", extra={"user_id": user.id})
+            else:
+                password = utils.decrypt(app.config["FERNET_KEY"], user.password_hash)
+                session_data = svc.proxy.login(user.email, password)
+                if not session_data:
+                    logger.warning("Failed to create session", extra=booking_data)
+                    bookings_cache[booking_id] = {
+                        "booking": booking_data,
+                        "error": SessionError(),
+                    }
+                    continue
+                svc.sessions.store_session(user.id, session_data)
+                logger.info("Created new session", extra={"user_id": user.id})
 
-            bookings_to_cache.append(booking_data)
-        cache.set("bookings", bookings_to_cache)
-        cache.set("sessions", sessions_to_cache)
-        cache.set("preflight", True)
+            times = svc.proxy.get_times(session_data, booking_data)
+            if not times:
+                logger.warning("No times from API", extra=booking_data)
+                bookings_cache[booking_id] = {
+                    "booking": booking_data,
+                    "error": NoTimesError(),
+                }
+                continue
+
+            available_slots = [slot for slot in times if utils.is_slot_available(slot)]
+            if not available_slots:
+                logger.warning("No available slots", extra=booking_data)
+                bookings_cache[booking_id] = {
+                    "booking": booking_data,
+                    "error": NoSlotsError(),
+                }
+                continue
+
+            available_slots.sort(
+                key=lambda s: utils.time_distance(
+                    s["start_time"], booking_data["target_time"]
+                )
+            )
+            bookings_cache[booking_id] = {
+                "booking": booking_data,
+                "session": session_data,
+                "times": [
+                    {"id": slot["id"], "start_time": slot["start_time"]}
+                    for slot in available_slots
+                ],
+            }
+
+        cache.set("bookings", bookings_cache)
         logger.info(
-            f"Cached {len(bookings_to_cache)} bookings for processing",
-            extra={
-                "date": today.isoformat(),
-                "target_date": target_date.isoformat(),
-            },
+            f"Cached {len(bookings_cache)} bookings for processing",
+            extra={"date": today.isoformat(), "target_date": target_date.isoformat()},
         )
 
     except Exception:
         logger.exception(
             "Preflight job failed",
-            extra={
-                "date": today.isoformat(),
-                "target_date": target_date.isoformat(),
-            },
+            extra={"date": today.isoformat(), "target_date": target_date.isoformat()},
         )
-        cache.set("preflight", False)
 
 
 def process(app):
-    if not cache.get("preflight"):
-        logger.warning("Preflight did not pass; Will not process")
-        return
-
     logger.info("Starting process job")
-    bookings = cache.get("bookings")
-    if not bookings:
-        today = date.today()
-        logger.info(
-            "Skipping processing; No bookings made",
-            extra={"date": today.isoformat()},
-        )
+
+    bookings_cache = cache.get("bookings")
+    if not bookings_cache:
+        logger.info("No bookings to process")
         return
 
-    def worker(booking):
+    def worker(booking_data, error=None, session_data=None, times=None):
         with app.app_context():
             start_time = time.time()
-            process0(booking)
+            process0(booking_data, error, session_data, times)
             duration = time.time() - start_time
             logger.info(
                 f"Booking processed in {duration:.2f} seconds",
-                extra={**booking, "duration_seconds": duration},
+                extra={**booking_data, "duration_seconds": duration},
             )
 
     threads = []
-    for booking in bookings:
-        thread = threading.Thread(target=worker, args=(booking,))
+    for _, data in bookings_cache.items():
+        thread = threading.Thread(
+            target=worker,
+            args=(
+                data["booking"],
+                data.get("error"),
+                data.get("session"),
+                data.get("times"),
+            ),
+        )
         thread.start()
         threads.append(thread)
 
@@ -134,105 +162,67 @@ def process(app):
         thread.join()
 
 
-def process0(booking):
-    try:
-        initial_delay = random.uniform(0.05, 0.2)
-        time.sleep(initial_delay)
-
-        sessions = cache.get("sessions") or {}
-        session_data = sessions.get(booking["id"])
-        if not session_data:
-            raise AuthenticationFailedError
-
-        available_times = None
-        max_retries = 3
-        for attempt in range(max_retries):
-            available_times = svc.proxy.get_available_times(session_data, booking)
-            if available_times:
-                break
-            if attempt < max_retries - 1:
-                base_delay = (2**attempt) * 0.3
-                jitter = random.uniform(0.8, 1.2)
-                delay = base_delay * jitter
-                logger.info(
-                    f"No times available, retrying in {delay:.2f}s (attempt {attempt + 1}/{max_retries})"
-                )
-                time.sleep(delay)
-
-        if not available_times:
-            raise NoneAvailableError
-
-        available_slots = [
-            slot for slot in available_times if utils.is_slot_available(slot)
-        ]
-        if not available_slots:
-            raise NoneDesiredError
-
-        available_slots.sort(
-            key=lambda slot: utils.time_distance(
-                slot["start_time"], booking["target_time"]
-            )
+def process0(booking, error=None, session_data=None, times=None):
+    def fail_booking(error_msg):
+        svc.bookings.update_booking(
+            booking["id"], {"status": Status.FAILED, "error_details": error_msg}
         )
+        svc.notifications.create_notification(
+            user_id=booking["user_id"],
+            booking_id=booking["id"],
+            notification_type=NotificationType.BOOKING_FAILED,
+            title="Booking Failed",
+            message=f"Your booking for {utils.format_date_readable(booking['booking_date'])} could not be completed. Reason: {error_msg}",
+        )
+        logger.error(error_msg, extra=booking, exc_info=True)
 
-        for slot in available_slots:
+    def complete_booking(teetime_id, actual_time):
+        updated_booking = svc.bookings.update_booking(
+            booking["id"],
+            {
+                "status": Status.COMPLETE,
+                "actual_time": actual_time,
+                "booking_id": teetime_id,
+            },
+        )
+        svc.notifications.create_notification(
+            user_id=booking["user_id"],
+            booking_id=booking["id"],
+            notification_type=NotificationType.BOOKING_SUCCESS,
+            title="Booking Complete!",
+            message=f"Your booking for {utils.format_date_readable(booking['booking_date'])} has been completed.",
+        )
+        logger.info("Successfully reserved time", extra=updated_booking.to_dict())
+
+    try:
+        if error:
+            raise error
+
+        for slot in times:
             teetime_id = slot["id"]
-            session_data, rounds_attributes = svc.proxy.warm_session(
-                session_data, booking, teetime_id
-            )
-            if not (session_data and rounds_attributes):
-                logger.warning(
-                    "Failure while warming session; Skipping time slot", extra=booking
-                )
+            frozen_session = svc.proxy.freeze(session_data, teetime_id)
+            if not frozen_session:
+                logger.warning("Failed to freeze", extra=booking)
                 continue
 
-            success = svc.proxy.reserve(
-                session_data, booking, teetime_id, rounds_attributes
+            warmed_session, rounds_attributes = svc.proxy.warm_session(
+                frozen_session, booking, teetime_id
             )
-            if success:
-                updated_booking = svc.bookings.update_booking(
-                    booking["id"],
-                    {
-                        "status": Status.COMPLETE,
-                        "actual_time": slot["start_time"],
-                        "booking_id": teetime_id,
-                    },
-                )
-                svc.notifications.create_notification(
-                    user_id=booking["user_id"],
-                    booking_id=booking["id"],
-                    notification_type=NotificationType.BOOKING_SUCCESS,
-                    title="Booking Complete!",
-                    message=f"Your booking for {utils.format_date_readable(booking['booking_date'])} has been completed at {utils.format_time_12h(slot['start_time'])}.",
-                )
-                logger.info(
-                    "Successfully reserved time", extra=updated_booking.to_dict()
-                )
+            if not (warmed_session and rounds_attributes):
+                logger.warning("warm_session failed", extra=booking)
+                continue
+
+            if svc.proxy.reserve(
+                warmed_session, booking, teetime_id, rounds_attributes
+            ):
+                complete_booking(teetime_id, slot["start_time"])
                 return
 
-        raise AllFailedError
+            logger.warning("reserve failed", extra=booking)
+
+        raise AllReserveFailed
+
     except ProcessorError as e:
-        error_msg = str(e)
-        svc.bookings.update_booking(
-            booking["id"], {"status": Status.FAILED, "error_details": error_msg}
-        )
-        logger.error(error_msg, extra=booking, exc_info=True)
-        svc.notifications.create_notification(
-            user_id=booking["user_id"],
-            booking_id=booking["id"],
-            notification_type=NotificationType.BOOKING_FAILED,
-            title="Booking Failed",
-            message=f"Unfortunately, your booking for {utils.format_date_readable(booking['booking_date'])} could not be completed. Reason: {error_msg}",
-        )
+        fail_booking(str(e))
     except Exception as e:
-        error_msg = f"Unexpected error: {str(e)}"
-        svc.bookings.update_booking(
-            booking["id"], {"status": Status.FAILED, "error_details": error_msg}
-        )
-        logger.error(error_msg, extra=booking, exc_info=True)
-        svc.notifications.create_notification(
-            user_id=booking["user_id"],
-            booking_id=booking["id"],
-            notification_type=NotificationType.BOOKING_FAILED,
-            title="Booking Failed",
-            message=f"Unfortunately, your booking for {utils.format_date_readable(booking['booking_date'])} could not be completed. Reason: {error_msg}",
-        )
+        fail_booking(f"Unexpected error: {str(e)}")

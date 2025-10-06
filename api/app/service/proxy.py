@@ -68,20 +68,8 @@ def validate_session(session_data):
     return response is not None and response.status_code == 200
 
 
-def get_available_times(session_data, booking):
-    club_id = app.config["CLUB_ID"]
-    course_id = app.config["COURSE_ID"]
-
-    owner_affiliation_id = next(
-        p["affiliation_id"]
-        for p in booking["players"]
-        if p["user_id"] == booking["user_id"]
-    )
-    affiliations = "&".join(
-        [f"affiliation_type_ids[]={owner_affiliation_id}"] * len(booking["players"])
-    )
-
-    endpoint = f"{app.config["PROXY_SEARCH"].format(club_id=club_id)}?date={booking['booking_date']}&course_id={course_id}&{affiliations}&nb_holes={booking['holes']}"
+def get_times(session_data, booking):
+    endpoint = f"{app.config['PROXY_SEARCH']}?course_id={app.config["COURSE_ID"]}&date={booking['booking_date']}"
     response = _request(session_data, "GET", endpoint)
     return response.json() if response and response.ok else None
 
@@ -103,6 +91,24 @@ def search_users(session_data, name_filter=None, email=None):
     )
     response = _request(session_data, "GET", endpoint)
     return response.json() if response and response.ok else None
+
+
+def freeze(session_data, teetime_id):
+    endpoint = app.config["PROXY_FREEZE"].format(teetime_id=teetime_id)
+    response = _request(session_data, "POST", endpoint, json={})
+
+    if not response:
+        return None
+
+    if response.status_code == 200:
+        new_session_data = {
+            "cookies": session_data["cookies"].copy(),
+            "csrf_token": session_data["csrf_token"],
+        }
+        new_session_data["cookies"].update(response.cookies)
+        return new_session_data
+
+    return None
 
 
 def warm_session(session_data, booking, teetime_id):
@@ -255,7 +261,6 @@ def _request(session_data, method, endpoint, **kwargs):
         if "timeout" not in kwargs:
             kwargs["timeout"] = app.config["REQUEST_TIMEOUT"]
 
-        logger.info(f"[Proxy Request] {method} {endpoint}")
         response = requests.request(
             method,
             url,
@@ -264,16 +269,17 @@ def _request(session_data, method, endpoint, **kwargs):
             impersonate="firefox133",
             **kwargs,
         )
-        logger.info(
-            f"[Proxy Request] {method} {endpoint} - Status: {response.status_code}, Length: {len(response.text)}"
-        )
 
-        if not response.ok:
+        if response.ok:
+            logger.info(
+                f"[Proxy Response] {method} {endpoint} - Status: {response.status_code}"
+            )
+        else:
             logger.error(
-                f"[Proxy Request] {method} {endpoint} - HTTP {response.status_code}: {response.text[:1000]}"
+                f"[Proxy Error] {method} {endpoint} - HTTP {response.status_code}: {response.text[:1000]}"
             )
 
         return response
     except Exception:
-        logger.exception(f"[Proxy Request] {method} {endpoint}")
+        logger.exception(f"[Proxy Error] {method} {endpoint}")
         return None
