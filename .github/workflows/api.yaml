@@ -18,4 +18,5 @@ jobs:
       - name: Deploy to Railway
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-        run: railway up ./api --service ${{ secrets.RAILWAY_SERVICE_ID }}
+        working-directory: ./api
+        run: railway up --service ${{ secrets.RAILWAY_SERVICE_ID }}
